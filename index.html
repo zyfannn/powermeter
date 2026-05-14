@@ -380,15 +380,26 @@ async function update(){
             setOnline();
 
             // ===== AMBIL DATA =====
-            const v  = parseFloat(await getValue(urlV));
-            const i  = parseFloat(await getValue(urlI));
-            const p  = parseFloat(await getValue(urlP));
-            const pf = parseFloat(await getValue(urlPF));
+           const v =
+parseFloat(JSON.parse(await getValue(urlV))[0]);
 
-            const adcV = parseFloat(await getValue(urlADCV));
-            const adcI = parseFloat(await getValue(urlADCI));
+const i =
+parseFloat(JSON.parse(await getValue(urlI))[0]);
 
-            const c = parseFloat(await getValue(urlC));
+const p =
+parseFloat(JSON.parse(await getValue(urlP))[0]);
+
+const pf =
+parseFloat(JSON.parse(await getValue(urlPF))[0]);
+
+const adcV =
+parseFloat(JSON.parse(await getValue(urlADCV))[0]);
+
+const adcI =
+parseFloat(JSON.parse(await getValue(urlADCI))[0]);
+
+const c =
+parseFloat(JSON.parse(await getValue(urlC))[0]);
 
             // ===== FAKE FREQUENCY =====
             phase += 0.35;
