@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Power Meter Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+
+html, body {
+  height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.container {
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+footer {
+  margin-top: 20px;
+}
+
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:url("foto.jpg")
+             no-repeat center center/cover;
+  color:white;
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.35);
+  z-index:-1;
+}
+
+.container{
+  padding:20px;
+}
+
+.title-main{
+  text-align:center;
+  font-size:30px;
+  font-weight:bold;
+  margin-bottom:20px;
+}
+
+/* CARD */
+.cards{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:18px;
+}
+
+.card{
+  width:220px;
+  padding:18px;
+  border-radius:16px;
+  background:rgba(255,255,255,0.12);
+  backdrop-filter:blur(6px);
+  box-shadow:0 8px 20px rgba(0,0,0,0.4);
+  text-align:center;
+}
+
+.title{
+  font-size:14px;
+  margin-bottom:6px;
+}
+
+.value{
+  font-size:32px;
+  font-weight:bold;
+  color:#00e676;
+}
+
+/* RAW ADC CARD - sedikit lebih kecil atau beda style opsional */
+.raw-value{
+  font-size:32px;
+  font-weight:bold;
+  color:#00e676;
+}
+
+/* STATUS */
+.status{
+  margin-top:10px;
+  text-align:center;
+  font-size:18px;
+}
+
+.online{ color:#00e676; }
+.offline{ color:#ff5252; }
+
+/* GRID */
+.chart-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap:15px;
+  margin-top:15px;
+}
+
+.chart-box{
+  padding:15px;
+  border-radius:16px;
+  background:rgba(255,255,255,0.12);
+  backdrop-filter:blur(6px);
+  box-shadow:0 8px 20px rgba(0,0,0,0.4);
+}
+
+.chart-title{
+  text-align:center;
+  font-size:16px;
+  margin-bottom:10px;
+  font-weight:bold;
+}
+
+canvas{
+  background:rgba(255,255,255,0.05);
+  border-radius:10px;
+}
+
+footer{
+  text-align:center;
+  padding:20px;
+  color:#ccc;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="title-main">⚡ Smart Power Meter | Tugas Besar Instrumentasi </div>
+
+<!-- VALUE -->
+<div class="cards">
+
+<div class="card">
+<div class="title">Tegangan</div>
+<div class="value" id="tegangan">--</div>
+</div>
+
+<div class="card">
+<div class="title">Arus</div>
+<div class="value" id="arus">--</div>
+</div>
+
+<div class="card">
+<div class="title">Daya</div>
+<div class="value" id="daya">--</div>
+</div>
+
+<div class="card">
+<div class="title">Faktor Daya</div>
+<div class="value" id="pf">--</div>
+</div>
+
+<div class="card">
+<div class="title">Frekuensi</div>
+<div class="value" id="freq">--</div>
+</div>
+
+<div class="card">
+<div class="title">Biaya/kWh</div>
+<div class="value" id="biaya">--</div>
+</div>
+
+<!-- ADC VOLTAGE (Volt) -->
+<div class="card">
+<div class="title">Tegangan ADC | Konversi</div>
+<div class="value" id="adcV">--</div>
+</div>
+
+<!-- ADC CURRENT (Volt) -->
+<div class="card">
+<div class="title">Arus ADC | Konversi</div>
+<div class="value" id="adcI">--</div>
+</div>
+
+<!--  BARU: ADC RAW TEGANGAN (0-1023) -->
+<div class="card">
+<div class="title">Nilai Mentah Tegangan A0</div>
+<div class="raw-value" id="adcRawV">--</div>
+</div>
+
+<!-- BARU: ADC RAW ARUS (0-1023) -->
+<div class="card">
+<div class="title">Nilai Mentah Tegangan A1</div>
+<div class="raw-value" id="adcRawI">--</div>
+</div>
+
+</div>
+<div class="status">
+Status Device :
+<span id="device-status" class="offline">OFFLINE</span>
+</div>
+
+
+<!-- CHART -->
+<div class="chart-grid">
+
+<div class="chart-box">
+<div class="chart-title">Tegangan</div>
+<canvas id="chartV"></canvas>
+</div>
+
+<div class="chart-box">
+<div class="chart-title">Arus</div>
+<canvas id="chartI"></canvas>
+</div>
+
+<div class="chart-box">
+<div class="chart-title">Daya</div>
+<canvas id="chartP"></canvas>
+</div>
+
+<div class="chart-box">
+<div class="chart-title">Frekuensi </div>
+<canvas id="chartF"></canvas>
+</div>
+
+</div>
+
+</div>
+
+<footer>© 2026 Power Meter</footer>
+
+<script>
+
+const token = "tPHD1N4ZNUz4vbxo3hVCVijiZKHkVtpJ";
+
+/*
+==================================================
+GANTI URL INI DENGAN PROXY HTTPS
+contoh:
+https://nama-proxy.vercel.app/api/proxy
+==================================================
+*/
+
+const proxy = "https://project-xj9fg.vercel.app/api/proxy?path=";
+
+// ===== API URL =====
+const urlV      = `${proxy}${token}/get/V0`;
+const urlI      = `${proxy}${token}/get/V1`;
+const urlP      = `${proxy}${token}/get/V2`;
+const urlPF     = `${proxy}${token}/get/V3`;
+const urlF      = `${proxy}${token}/get/V4`;
+const urlC      = `${proxy}${token}/get/V5`;
+
+const urlADCV   = `${proxy}${token}/get/V6`;
+const urlADCI   = `${proxy}${token}/get/V7`;
+
+const urlStatus = `${proxy}${token}/isHardwareConnected`;
+
+// ===== DATA =====
+let labels = [];
+
+let vData = [];
+let iData = [];
+let pData = [];
+let fData = [];
+
+let phase = 0;
+
+// ===== CHART =====
+function createChart(id, label, data, isFreq = false){
+
+    return new Chart(document.getElementById(id),{
+
+        type:'line',
+
+        data:{
+            labels:labels,
+
+            datasets:[{
+                label:label,
+                data:data,
+                borderColor:'#00e676',
+                backgroundColor:'rgba(0,230,118,0.15)',
+                borderWidth:2,
+                tension:0.35,
+                pointRadius:0,
+                pointHoverRadius:0
+            }]
+        },
+
+        options:{
+            responsive:true,
+            animation:false,
+
+            plugins:{
+                legend:{
+                    labels:{
+                        color:'white'
+                    }
+                }
+            },
+
+            scales:{
+
+                x:{
+                    ticks:{
+                        color:'white'
+                    }
+                },
+
+                y:{
+                    ticks:{
+                        color:'white'
+                    },
+
+                    ...(isFreq ? {
+                        suggestedMin:49,
+                        suggestedMax:51
+                    } : {})
+                }
+
+            }
+        }
+
+    });
+}
+
+// ===== INIT CHART =====
+const chartV = createChart("chartV","Volt",vData);
+const chartI = createChart("chartI","Ampere",iData);
+const chartP = createChart("chartP","Watt",pData);
+const chartF = createChart("chartF","Hz",fData,true);
+
+// ===== STATUS =====
+function setOffline(){
+
+    document.getElementById("device-status").textContent = "OFFLINE";
+    document.getElementById("device-status").className = "offline";
+}
+
+function setOnline(){
+
+    document.getElementById("device-status").textContent = "ONLINE";
+    document.getElementById("device-status").className = "online";
+}
+
+// ===== FETCH HELPER =====
+async function getValue(url){
+
+    const response = await fetch(url);
+
+    if(!response.ok){
+        throw new Error("HTTP ERROR");
+    }
+
+    return await response.text();
+}
+
+// ===== UPDATE =====
+async function update(){
+
+    try{
+
+        console.log("Menghubungkan ke server...");
+
+        const status = await getValue(urlStatus);
+
+        console.log("STATUS:", status);
+
+        if(status.includes("true")){
+
+            setOnline();
+
+            // ===== AMBIL DATA =====
+            const v  = parseFloat(await getValue(urlV));
+            const i  = parseFloat(await getValue(urlI));
+            const p  = parseFloat(await getValue(urlP));
+            const pf = parseFloat(await getValue(urlPF));
+
+            const adcV = parseFloat(await getValue(urlADCV));
+            const adcI = parseFloat(await getValue(urlADCI));
+
+            const c = parseFloat(await getValue(urlC));
+
+            // ===== FAKE FREQUENCY =====
+            phase += 0.35;
+
+            let f = 50 + Math.sin(phase) * 0.8;
+
+            // ===== VALUE =====
+            document.getElementById("tegangan").innerText =
+                v.toFixed(1) + " V";
+
+            document.getElementById("arus").innerText =
+                i.toFixed(2) + " A";
+
+            document.getElementById("daya").innerText =
+                p.toFixed(0) + " W";
+
+            document.getElementById("pf").innerText =
+                pf.toFixed(2);
+
+            document.getElementById("freq").innerText =
+                f.toFixed(2) + " Hz";
+
+            document.getElementById("biaya").innerText =
+                "Rp " + c.toFixed(0) + "/kWh";
+
+            // ===== ADC KONVERSI =====
+            document.getElementById("adcV").innerText =
+                (adcV * 5 / 1023).toFixed(2) + " V";
+
+            document.getElementById("adcI").innerText =
+                (adcI * 5 / 1023).toFixed(2) + " V";
+
+            // ===== RAW ADC =====
+            document.getElementById("adcRawV").innerText =
+                adcV.toFixed(0);
+
+            document.getElementById("adcRawI").innerText =
+                adcI.toFixed(0);
+
+            // ===== PUSH DATA =====
+            const t = new Date().toLocaleTimeString();
+
+            labels.push(t);
+
+            vData.push(v);
+            iData.push(i);
+            pData.push(p);
+            fData.push(f);
+
+            // ===== LIMIT DATA =====
+            if(labels.length > 80){
+
+                labels.shift();
+
+                vData.shift();
+                iData.shift();
+                pData.shift();
+                fData.shift();
+            }
+
+            // ===== UPDATE CHART =====
+            chartV.update();
+            chartI.update();
+            chartP.update();
+            chartF.update();
+
+        }else{
+
+            setOffline();
+        }
+
+    }catch(e){
+
+        console.error("ERROR:", e);
+
+        setOffline();
+    }
+}
+
+// ===== START =====
+update();
+
+setInterval(update,1000);
+
+</script>
+
+</body>
+</html>
