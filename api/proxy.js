@@ -1,19 +1,13 @@
 export default async function handler(req, res) {
 
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET");
-    res.setHeader("Access-Control-Allow-Headers", "*");
-
-    if (req.method === "OPTIONS") {
-        return res.status(200).end();
-    }
 
     try {
 
         const path = req.query.path || "";
 
         const url =
-            `http://iot.serangkota.go.id:8080/${path}`;
+        `http://iot.serangkota.go.id:8080/${path}`;
 
         const response = await fetch(url);
 
@@ -21,10 +15,8 @@ export default async function handler(req, res) {
 
         return res.status(200).send(text);
 
-    } catch (err) {
+    } catch (e) {
 
-        return res.status(500).json({
-            error: err.toString()
-        });
+        return res.status(500).send(e.toString());
     }
 }
